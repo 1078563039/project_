@@ -1,0 +1,73 @@
+server:
+  port: 31000
+
+spring:
+  application:
+    name: project-gateway
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      server-addr: 192.168.58.128:30002
+      config:
+        group: project
+        namespace: 9de11b6a-a3e8-42b5-8130-39a4f72e9d53
+        file-extension: yml
+      discovery:
+        group: ${spring.cloud.nacos.config.group}
+        namespace: ${spring.cloud.nacos.config.namespace}
+    gateway:
+      routes:
+        - id: project-admin
+          uri: lb://project-admin
+          predicates:
+            - Path=/admin/**
+#          filters:
+#            - StripPrefix=1
+        - id: project-auth
+          uri: lb://project-auth
+          predicates:
+            - Path=/auth/**
+#          filters:
+#            - StripPrefix=1
+        - id: project-oss
+          uri: lb://project-oss
+          predicates:
+            - Path=/oss/**
+#          filters:
+#            - StripPrefix=1
+        - id: project-ygo
+          uri: lb://project-ygo
+          predicates:
+            - Path=/ygo/**
+
+  redis:
+    host: 192.168.58.128
+    database: 0
+    port: 30003
+
+security:
+  ignoreUrls:
+    - /captcha
+    - /auth/oauth/token
+    - /actuator/health
+    - /**/actuator/health
+    - /**/v2/api-docs
+    - /**/swagger-resources/**
+    - /**/swagger-ui.html
+    - /**/webjars/**
+
+
+management:
+  health:
+    db:
+      enabled: false
+    rabbit:
+      enabled: false
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: "*"

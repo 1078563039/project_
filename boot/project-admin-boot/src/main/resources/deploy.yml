@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: project-admin
+  name: project-admin
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-admin
+  template:
+    metadata:
+      labels:
+        app: project-admin
+    spec:
+      containers:
+        - env:
+          - name: TZ
+            value: Asia/Shanghai
+          - name: LANG
+            value: C.UTF-8
+          image: 192.168.58.128/project/project-admin:jenkins-PROJECT_ADMIN-6-c33037d
+          imagePullPolicy: IfNotPresent
+          name: project-admin
+          ports:
+            - containerPort: 31002
+              name: web
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: harbor-key
+      restartPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: project-admin
+  name: project-admin
+  namespace: dev
+spec:
+  ports:
+    - name: web
+      port: 31002
+      protocol: TCP
+      targetPort: 31002
+  selector:
+    app: project-admin
+  type: ClusterIP
+

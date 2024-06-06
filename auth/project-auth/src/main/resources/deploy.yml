@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: project-auth
+  name: project-auth
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-auth
+  template:
+    metadata:
+      labels:
+        app: project-auth
+    spec:
+      containers:
+        - env:
+          - name: TZ
+            value: Asia/Shanghai
+          - name: LANG
+            value: C.UTF-8
+          image: 192.168.58.128/project/project-auth:jenkins-PROJECT_AUTH-1-b36d79b
+          imagePullPolicy: IfNotPresent
+          name: project-auth
+          ports:
+            - containerPort: 31001
+              name: web
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: harbor-key
+      restartPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: project-auth
+  name: project-auth
+  namespace: dev
+spec:
+  ports:
+    - name: web
+      port: 31001
+      protocol: TCP
+      targetPort: 31001
+  selector:
+    app: project-auth
+  type: ClusterIP
+

@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>project</artifactId>
+        <groupId>org.example</groupId>
+        <version>1.0.3-SNAPSHOT</version>
+    </parent>
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>common</artifactId>
+    <packaging>pom</packaging>
+
+<!--
+-javaagent:C:\self\dev\application\project\common\common-skywalking\agent\skywalking-agent.jar -Dskywalking.agent.service_name=project-auth-service -Dskywalking.agent.instance_name=project-auth-instance -Dskywalking.collector.backend_service=192.168.58.128:30011
+-->
+
+    <modules>
+        <module>common-base</module>
+        <module>common-utils</module>
+        <module>common-sms</module>
+        <module>common-rabbitmq</module>
+        <module>common-redis</module>
+        <module>common-sentinel</module>
+        <module>common-mybatis</module>
+        <module>common-sharding-jdbc</module>
+        <module>common-rocketmq</module>
+        <!--        <module>common-skywalking</module>-->
+<!--        <module>common-rocketmq</module>-->
+<!--        <module>common-elasticsearch</module>-->
+<!--        <module>common-oss</module>-->
+    </modules>
+
+</project>

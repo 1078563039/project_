@@ -1,0 +1,4 @@
+server:
+  port: 31002
+  servlet:
+    context-path: /data

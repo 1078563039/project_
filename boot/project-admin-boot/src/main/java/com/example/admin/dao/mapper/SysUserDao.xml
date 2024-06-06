@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.admin.dao.SysUserDao">
+
+    <resultMap id="selectPageListMap" type="com.example.admin.pojo.entity.SysUserEntity">
+        <id column="id" property="id"/>
+        <result column="dept_id" property="deptId"/>
+        <result column="user_name" property="userName"/>
+        <result column="pass_word" property="passWord"/>
+        <result column="mobile" property="mobile"/>
+        <result column="nick_name" property="nickName"/>
+        <result column="email" property="email"/>
+        <result column="sex" property="sex"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="is_delete" property="isDelete"/>
+        <collection property="sysDeptEntity" column="dept_id" ofType="com.example.admin.pojo.entity.SysDeptEntity"
+                    select="com.example.admin.dao.SysDeptDao.selectById"/>
+        <collection property="sysRoleEntityList" column="id" ofType="com.example.admin.pojo.entity.SysRoleEntity"
+                    select="com.example.admin.dao.SysRoleDao.selectByUserId"/>
+    </resultMap>
+
+    <update id="assignRole">
+        delete from sys_user_role where user_id = #{userId};
+        <foreach collection="roleIdList" item="roleId" separator=";">
+            insert into sys_user_role (user_id, role_id) values (#{userId}, #{roleId})
+        </foreach>
+    </update>
+
+    <select id="selectRoleId" resultType="java.lang.Long" parameterType="java.lang.Long">
+        select role_id from sys_user_role where user_id = #{userId}
+    </select>
+
+    <resultMap id="baseMap" type="com.example.admin.pojo.entity.SysUserEntity">
+        <id column="id" property="id"/>
+        <result column="dept_id" property="deptId"/>
+        <result column="user_name" property="userName"/>
+        <result column="pass_word" property="passWord"/>
+        <result column="mobile" property="mobile"/>
+        <result column="nick_name" property="nickName"/>
+        <result column="email" property="email"/>
+        <result column="sex" property="sex"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="is_delete" property="isDelete"/>
+        <collection property="sysDeptEntity" column="dept_id" ofType="com.example.admin.pojo.entity.SysDeptEntity"
+                    select="com.example.admin.dao.SysDeptDao.selectById"/>
+        <collection property="sysRoleEntityList" column="id" ofType="com.example.admin.pojo.entity.SysRoleEntity"
+                    select="com.example.admin.dao.SysRoleDao.selectByUserId"/>
+    </resultMap>
+    <select id="userSelectById" resultMap="baseMap"
+            parameterType="java.lang.Long">
+        select id, dept_id, user_name, pass_word, mobile, nick_name, email, sex, status, create_time, create_by, is_delete from sys_user where id = #{id}
+    </select>
+
+</mapper>

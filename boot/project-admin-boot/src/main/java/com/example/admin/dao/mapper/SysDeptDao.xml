@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.admin.dao.SysDeptDao">
+
+    <resultMap id="baseMap" type="com.example.admin.pojo.entity.SysDeptEntity">
+        <id column="id" property="id"/>
+        <result column="pid" property="pid"/>
+        <result column="like_id" property="likeId"/>
+        <result column="manager_id" property="managerId"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="address" property="address"/>
+        <result column="phone" property="phone"/>
+        <result column="order_num" property="orderNum"/>
+        <result column="open" property="open"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="is_delete" property="isDelete"/>
+    </resultMap>
+
+    <resultMap id="treeMap" type="com.example.admin.pojo.entity.SysDeptEntity">
+        <id column="id" property="id"/>
+        <result column="pid" property="pid"/>
+        <result column="like_id" property="likeId"/>
+        <result column="manager_id" property="managerId"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="address" property="address"/>
+        <result column="phone" property="phone"/>
+        <result column="order_num" property="orderNum"/>
+        <result column="open" property="open"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="is_delete" property="isDelete"/>
+        <collection column="id" property="children"  ofType="com.example.admin.pojo.entity.SysDeptEntity"  select="selectByParentId" >
+        </collection>
+    </resultMap>
+
+    <select id="selectTree" parameterType="java.lang.String" resultMap="treeMap">
+        select id, pid, like_id, manager_id, name, code, address,
+               phone, order_num, open, create_by, create_time, update_by,
+               update_time, is_delete
+        from sys_dept
+        where is_delete = 0
+        <if test="pid != null">
+            and pid = #{pid}
+        </if>
+    </select>
+
+    <select id="selectByParentId" parameterType="java.lang.String" resultMap="treeMap">
+        select id, pid, like_id, manager_id, name, code, address,
+               phone, order_num, open, create_by, create_time, update_by,
+               update_time, is_delete
+        from sys_dept
+        where is_delete = 0
+        <if test="id != null">
+            and pid = #{id}
+        </if>
+    </select>
+
+</mapper>

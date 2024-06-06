@@ -1,0 +1,200 @@
+pipeline {
+  agent {
+    kubernetes {
+      cloud 'kubernetes'
+      slaveConnectTimeout 1200
+      workspaceVolume hostPathWorkspaceVolume(hostPath: "/opt/workspace", readOnly: false)
+      yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - image: 'jenkins/jnlp-slave:4.13.2-1-jdk11'
+    args: [\'$(JENKINS_SECRET)\', \'$(JENKINS_NAME)\']
+    name: jnlp
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: /etc/localtime
+      name: localtime
+      readOnly: false
+    - name: ssh-keys
+      mountPath: /home/jenkins/.ssh
+      readOnly: true
+  - image: 'maven:3.9-amazoncorretto-11'
+    imagePullPolicy: IfNotPresent
+    name: build
+    tty: true
+    volumeMounts:
+    - mountPath: /etc/localtime
+      name: localtime
+    - mountPath: /root/.m2/
+      name: cachedir
+      readOnly: false
+    - mountPath: /root/.m2/repository
+      name: cachedir
+      readOnly: false
+    - mountPath: /root/.m2
+      name: settings-volume
+    command:
+      - "cat"
+    env:
+      - name: "LANGUAGE"
+        value: "en_US:en"
+      - name: "LC_ALL"
+        value: "en_US.UTF-8"
+      - name: "LANG"
+        value: "en_US.UTF-8"
+  - image: 'registry.cn-beijing.aliyuncs.com/citools/kubectl:self-1.17'
+    imagePullPolicy: IfNotPresent
+    name: kubectl
+    tty: true
+    volumeMounts:
+    - mountPath: /etc/localtime
+      name: localtime
+      readOnly: false
+    command:
+      - "cat"
+    env:
+      - name: "LANGUAGE"
+        value: "en_US:en"
+      - name: "LC_ALL"
+        value: "en_US.UTF-8"
+      - name: "LANG"
+        value: "en_US.UTF-8"
+  - image: 'registry.cn-beijing.aliyuncs.com/citools/docker:19.03.9-git'
+    imagePullPolicy: IfNotPresent
+    name: docker
+    tty: true
+    volumeMounts:
+    - mountPath: /etc/localtime
+      name: localtime
+      readOnly: false
+    - mountPath: /var/run/docker.sock
+      name: dockersock
+      readOnly: false
+    - name: ssh-keys
+      mountPath: /root/.ssh
+      readOnly: true
+    - name: docker-setting
+      mountPath: /etc/docker
+      readOnly: false
+    command:
+      - "cat"
+    env:
+      - name: "LANGUAGE"
+        value: "en_US:en"
+      - name: "LC_ALL"
+        value: "en_US.UTF-8"
+      - name: "LANG"
+        value: "en_US.UTF-8"
+  restartPolicy: Never
+  nodeSelector:
+    build: 'true'
+  securityContext: {}
+  volumes:
+  - hostPath:
+      path: /var/run/docker.sock
+    name: dockersock
+  - hostPath:
+      path: /usr/share/zoneinfo/Asia/Shanghai
+    name: localtime
+  - name: cachedir
+    hostPath:
+      path: /opt/m2
+  - name: cachedir-repository
+    hostPath:
+      path: /opt/m2/repository
+  - name: ssh-keys
+    secret:
+      secretName: ssh-secret
+  - name: settings-volume
+    configMap:
+      name: maven-settings
+  - name: docker-setting
+    hostPath:
+      path: /etc/docker
+'''
+    }
+  }
+
+  stages {
+
+    stage('Pulling Code') {
+      parallel {
+        stage('Pulling Code by Jenkins') {
+          steps {
+            git(changelog: true, poll: true, url: 'git@gitee.com:dzkai/project.git', branch: "${BRANCH}", credentialsId: 'gitee-key')
+            script {
+              COMMIT_ID = sh(returnStdout: true, script: "git log -n 1 --pretty=format:'%h'").trim()
+              TAG = BUILD_TAG + '-' + COMMIT_ID
+              println "Current branch is ${BRANCH}, Commit ID is ${COMMIT_ID}, Image TAG is ${TAG}"
+            }
+          }
+        }
+      }
+    }
+
+    stage('Build') {
+      steps {
+        container(name: 'build') {
+          sh """
+            mvn clean install -DskipTests
+          """
+        }
+      }
+    }
+
+    stage('Docker build for creating image') {
+      environment {
+        HARBOR_USER = credentials('harbor_account')
+      }
+      steps {
+        container(name: 'docker') {
+          sh """
+            cat /etc/docker/daemon.json
+            echo ${HARBOR_USER_USR} ${HARBOR_USER_PSW} ${TAG}
+            docker build -t ${HARBOR_ADDRESS}/${REGISTRY_DIR}/${IMAGE_NAME}:${TAG} -f auth/project-auth/src/main/resources/Dockerfile .
+
+            echo ${HARBOR_USER_PSW} | docker login --username ${HARBOR_USER_USR} --password-stdin registry.cn-hangzhou.aliyuncs.com
+            docker push ${HARBOR_ADDRESS}/${REGISTRY_DIR}/${IMAGE_NAME}:${TAG}
+          """
+        }
+      }
+    }
+
+    stage('Deploy') {
+      environment {
+        MY_KUBECONFIG = credentials('kubeconfig')
+      }
+      steps {
+        container(name: 'kubectl'){
+          sh """
+            /usr/local/bin/kubectl --kubeconfig $MY_KUBECONFIG set image deploy -l app=${IMAGE_NAME} ${IMAGE_NAME}=${HARBOR_ADDRESS}/${REGISTRY_DIR}/${IMAGE_NAME}:${TAG} -n $NAMESPACE
+          """
+        }
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Build successful! Send notifications, trigger other jobs, etc.'
+    }
+    failure {
+      echo 'Build failed! Send notifications, trigger other jobs, etc.'
+    }
+  }
+
+  environment {
+    COMMIT_ID = ""
+    HARBOR_ADDRESS = "registry.cn-hangzhou.aliyuncs.com"
+    REGISTRY_DIR = "dzkai_project"
+    IMAGE_NAME = "project-auth"
+    NAMESPACE = "dev"
+    TAG = ""
+  }
+
+  parameters {
+    gitParameter(branch: '', branchFilter: 'origin/(.*)', defaultValue:'master', description: 'Branch for build and deploy', name: 'BRANCH', quickFilterEnabled: false, selectedValue: 'NONE', sortMode: 'NONE', tagFilter: '*', type: 'PT_BRANCH')
+  }
+}

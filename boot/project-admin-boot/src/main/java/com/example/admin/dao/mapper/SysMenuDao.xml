@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.admin.dao.SysMenuDao">
+    <resultMap id="baseMap" type="com.example.admin.pojo.entity.SysMenuEntity">
+        <id column="id" property="id"/>
+        <result column="pid" property="pid"/>
+        <result column="name" property="name"/>
+        <result column="path" property="path"/>
+        <result column="path_component" property="component"/>
+        <result column="permission" property="permission"/>
+        <result column="title" property="title"/>
+        <result column="level" property="level"/>
+        <result column="icon" property="icon"/>
+    </resultMap>
+
+    <resultMap id="treeMap" type="com.example.admin.pojo.entity.SysMenuEntity">
+        <id column="id" property="id"/>
+        <result column="pid" property="pid"/>
+        <result column="name" property="name"/>
+        <result column="label" property="label"/>
+        <result column="path" property="path"/>
+        <result column="path_component" property="component"/>
+        <result column="permission" property="permission"/>
+        <result column="title" property="title"/>
+        <result column="level" property="level"/>
+        <result column="icon" property="icon"/>
+        <collection column="id" property="children"  ofType="com.example.admin.pojo.entity.SysMenuEntity"  select="getMenuByPid" >
+        </collection>
+    </resultMap>
+    <update id="assignSave">
+        delete from sys_role_menu where role_id = #{roleId};
+        <foreach collection="menuIdList" item="menuId" separator=";">
+            insert into sys_role_menu (role_id, menu_id) values (#{roleId}, #{menuId})
+        </foreach>
+    </update>
+    <select id="selectTree" resultMap="treeMap">
+        select id, pid, label, path, path_component, permission, name, title, level, icon
+        from sys_menu
+        where is_delete = 0
+        <if test="pid != null">
+            and pid = #{pid}
+        </if>
+    </select>
+
+    <select id="getMenuByPid" parameterType="java.lang.String" resultMap="treeMap">
+        select id, pid, label, path, path_component, permission, name, title, level, icon
+        from sys_menu
+        where is_delete = 0
+        <if test="pid != null">
+            and pid = #{id}
+        </if>
+    </select>
+
+    <select id="routes" resultType="com.example.admin.pojo.entity.SysMenuEntity" resultMap="baseMap">
+        select tab1.id,
+               tab1.pid,
+               tab1.path,
+               tab1.path_component,
+               tab1.permission,
+               tab1.name,
+               tab1.title,
+               tab1.level,
+               tab1.icon
+        from sys_menu tab1
+                 left join sys_role_menu tab2 on tab1.id = tab2.menu_id
+                 left join sys_user_role tab3 on tab2.role_id = tab3.role_id
+        where tab3.user_id = #{userId} and tab1.label in (0, 1) and tab1.is_delete = 0
+        group by tab1.id
+    </select>
+
+    <select id="permissions" resultType="com.example.admin.pojo.entity.SysMenuEntity" resultMap="baseMap">
+        select tab1.id,
+               tab1.pid,
+               tab1.path,
+               tab1.path_component,
+               tab1.permission,
+               tab1.name,
+               tab1.title,
+               tab1.level,
+               tab1.icon
+        from sys_menu tab1
+                 left join sys_role_menu tab2 on tab1.id = tab2.menu_id
+                 left join sys_user_role tab3 on tab2.role_id = tab3.role_id
+        where tab3.user_id = #{userId} and tab1.label = 2 and tab1.is_delete = 0
+        group by tab1.id
+    </select>
+
+    <select id="assignList" resultType="com.example.admin.pojo.entity.SysMenuEntity">
+        select tab1.id,
+               tab1.pid,
+               tab1.path,
+               tab1.path_component,
+               tab1.permission,
+               tab1.name,
+               tab1.title,
+               tab1.level,
+               tab1.icon
+        from sys_menu tab1
+        left join sys_role_menu tab2 on tab1.id = tab2.menu_id
+        where tab2.role_id = #{roleId} and tab1.is_delete = 0
+    </select>
+
+</mapper>

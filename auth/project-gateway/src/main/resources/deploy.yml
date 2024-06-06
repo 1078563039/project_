@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: project-gateway
+  name: project-gateway
+  namespace: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: project-gateway
+  template:
+    metadata:
+      labels:
+        app: project-gateway
+    spec:
+      containers:
+        - env:
+          - name: TZ
+            value: Asia/Shanghai
+          - name: LANG
+            value: C.UTF-8
+          image: 192.168.58.128/project/project-gateway:jenkins-PROJECT_GATEWAY-93-d9af433
+          imagePullPolicy: IfNotPresent
+          name: project-gateway
+          ports:
+            - containerPort: 31000
+              name: web
+              protocol: TCP
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: harbor-key
+      restartPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: project-gateway
+  name: project-gateway
+  namespace: dev
+spec:
+  ports:
+    - name: web
+      port: 31000
+      protocol: TCP
+      targetPort: 31000
+  selector:
+    app: project-gateway
+  type: ClusterIP
+

@@ -1,0 +1,179 @@
+server:
+  port: 31002
+  servlet:
+    context-path: /admin
+
+spring:
+  application:
+    name: project-admin
+  cloud:
+    nacos:
+      server-addr: 192.168.58.128:30002
+      config:
+        group: project
+        namespace: 9de11b6a-a3e8-42b5-8130-39a4f72e9d53
+        file-extension: yml
+      discovery:
+        group: ${spring.cloud.nacos.config.group}
+        namespace: ${spring.cloud.nacos.config.namespace}
+    sentinel:
+      eager: true
+      transport:
+        dashboard: 192.168.58.128:30006
+        port: 8791
+      datasource: # sentinel用nacos作为数据源的配置
+        flux-control: # 流控管理（这个名称可以自定义）
+          nacos: # 告诉sentinel用nacos作为数据源
+            data-id: feign-project-admin_flux-control_config.json # 配置中心里执行文件的dataId
+            server-addr: ${spring.cloud.nacos.server-addr}
+            namespace: ${spring.cloud.nacos.config.namespace}
+            group-id: ${spring.cloud.nacos.config.group}
+            data-type: json
+            rule-type: flow # 指定文件配置的是那种规则
+        degrade-control: # 熔断管理（这个名称可以自定义）
+          nacos:
+            data-id: feign-project-admin_degrade-control_config.json
+            server-addr: ${spring.cloud.nacos.server-addr}
+            namespace: ${spring.cloud.nacos.config.namespace}
+            group-id: ${spring.cloud.nacos.config.group}
+            data-type: json
+            rule-type: degrade
+        param-flow-control: # 热点参数管理（这个名称可以自定义）
+          nacos:
+            data-id: feign-project-admin_hot-flux_config.json
+            server-addr: ${spring.cloud.nacos.server-addr}
+            namespace: ${spring.cloud.nacos.config.namespace}
+            group-id: ${spring.cloud.nacos.config.group}
+            data-type: json
+            rule-type: param-flow
+  flyway:
+    clean-disabled: true #禁用clean操作,禁止清理数据库表，生产环境上必须关闭flyway:clean指令，因为一旦误操作，所有数据将会被清空；
+    enabled: true #使flyway生效，注意只允许在测试和开发环境开启
+    baseline-on-migrate: true #初始化时如果不存在迁移记录表，默认新建一个,如果数据库不是空表，需要设置成 true，否则启动报错
+    out-of-order: true #防止开发环境下漏掉没来得及apply的文件，产品环境最好设为false
+    locations: classpath:/db/migration
+    # 检测迁移脚本的路径是否存在，如不存在，则抛出异常
+    check-location: true
+    encoding: UTF-8
+
+  rabbitmq:
+    host: 192.168.58.128
+    port: 30004
+    username: guest
+    password: guest
+    virtual-host: /
+    modules:
+      - routing-key: send.sms.ali.routing.key
+        queue:
+          name: send.sms.ali.queue
+          deadLetterRoutingKey: send.sms.ali.routing.key.dlx
+          deadLetterExchange: send.sms.ali.exchange.dlx
+          arguments:
+            x-message-ttl: 10000
+        exchange:
+          name: send.sms.ali.exchange
+      - routing-key: send.sms.ali.routing.key.dlx
+        queue:
+          name: send.sms.ali.queue.dlx
+        exchange:
+          name: send.sms.ali.exchange.dlx
+
+  redis:
+    host: 192.168.58.128
+    database: 0
+    port: 30003
+  shardingsphere:
+    props:
+      sql:
+        show: true
+    datasource:
+      names: ds-master-1 ,ds-slave-1
+      ds-master-1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://192.168.58.128:30001/project_admin?useSSL=false&useUnicode=true&characterEncoding=utf8&autoReconnect=true&allowMultiQueries=true&allowPublicKeyRetrieval=true
+        username: root
+        password: 123456
+        maxPoolSize: 20
+        minPoolSize: 5
+      ds-slave-1:
+        type: com.alibaba.druid.pool.DruidDataSource
+        driver-class-name: com.mysql.jdbc.Driver
+        url: jdbc:mysql://192.168.58.128:30001/project_admin?useSSL=false&useUnicode=true&characterEncoding=utf8&autoReconnect=true&allowMultiQueries=true&allowPublicKeyRetrieval=true
+        username: root
+        password: 123456
+        maxPoolSize: 20
+        minPoolSize: 5
+    sharding:
+      default-data-source-name: ds-master-1
+    masterslave:
+      name: ms
+      load-balance-algorithm-type: round_robin
+      master-data-source-name: ds-master-1
+      slave-data-source-names: ds-slave-1
+  elasticsearch:
+    rest:
+      uris: http://192.168.58.128:30010
+      connection-timeout: 1s
+      read-timeout: 30s
+
+
+seata:
+#  application-id: ${spring.application.name}
+  tx-service-group: default_tx_group
+  registry:
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: 192.168.58.128:30002
+      namespace: 24ed7554-3963-4494-a518-417f685c1b94
+      cluster: default
+      group: SEATA_GROUP
+  config:
+    type: nacos
+    nacos:
+      server-addr: 192.168.58.128:30002
+      namespace: 24ed7554-3963-4494-a518-417f685c1b94
+      group: SEATA_GROUP
+#      data-id: seataServer.properties
+
+
+aliyun:
+  sms:
+    accessKeyId:
+    accessKeySecret:
+    template_code:
+    sign_name:
+
+  #xml文件位置  com.example.admin.dao.mapper
+mybatis-plus:
+  mapper-locations: classpath:com/example/admin/dao/mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+
+feign:
+  sentinel:
+    enabled: true
+  hystrix:
+    enabled: false
+  client:
+    config:
+      default:
+        readTimeout: 60000
+        connectTimeout: 60000
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+
+
+
